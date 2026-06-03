@@ -15,6 +15,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { useInitializeReservations } from '@/stores/reservationStore';
+import { useInitializeIncidents } from '@/stores/incidentStore';
+import { useInitializeDelinquencies } from '@/stores/delinquencyStore';
+import { useInitializeWorkOrders } from '@/stores/workOrderStore';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -27,6 +31,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { theme, toggleTheme } = useThemeStore();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useInitializeReservations();
+  useInitializeIncidents();
+  useInitializeDelinquencies();
+  useInitializeWorkOrders();
 
   useEffect(() => {
     const handleScroll = () => {

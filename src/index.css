@@ -92,3 +92,21 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+/* Estilizar ícones dos inputs de data e hora para modo dark */
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+/* Firefox */
+.dark input[type="date"]::-moz-calendar-picker-indicator,
+.dark input[type="time"]::-moz-calendar-picker-indicator {
+  color: white;
+}
+
+/* Edge */
+.dark input[type="date"]::-ms-calendar-picker-indicator,
+.dark input[type="time"]::-ms-calendar-picker-indicator {
+  filter: invert(1);
+}

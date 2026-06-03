@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { IntegerInput } from '@/components/ui/integer-input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
@@ -21,14 +20,13 @@ export function Delinquencies() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingDelinquency, setEditingDelinquency] = useState<Delinquency | null>(null);
   const [deletingDelinquencyId, setDeletingDelinquencyId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Pick<Delinquency, 'unit' | 'residentName' | 'status' | 'month'> & { amount: number; dueDate: string; year: number }>({
+  
+  const [formData, setFormData] = useState<Pick<Delinquency, 'unit' | 'residentName' | 'status'> & { amount: number; dueDate: string }>({
     unit: '',
     residentName: '',
     amount: 0,
     dueDate: new Date().toISOString().split('T')[0],
     status: 'pending',
-    month: '',
-    year: new Date().getFullYear(),
   });
 
   const getStatusColor = (status: string) => {
@@ -65,8 +63,6 @@ export function Delinquencies() {
       amount: 0,
       dueDate: new Date().toISOString().split('T')[0],
       status: 'pending',
-      month: '',
-      year: new Date().getFullYear(),
     });
     setIsModalOpen(true);
   };
@@ -79,8 +75,6 @@ export function Delinquencies() {
       amount: delinquency.amount,
       dueDate: delinquency.dueDate.toISOString().split('T')[0],
       status: delinquency.status,
-      month: delinquency.month,
-      year: delinquency.year,
     });
     setIsModalOpen(true);
   };
@@ -90,28 +84,42 @@ export function Delinquencies() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = {
       ...formData,
       dueDate: new Date(formData.dueDate),
     };
+    
     if (editingDelinquency) {
-      updateDelinquency(editingDelinquency.id, data);
-      addToast('Inadimplência atualizada com sucesso!');
+      const result = await updateDelinquency(editingDelinquency.id, data);
+      if (result.success) {
+        addToast('Inadimplência atualizada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao atualizar a inadimplência. ${result.error}`, 'error');
+      }
     } else {
-      addDelinquency(data);
-      addToast('Inadimplência criada com sucesso!');
+      const result = await addDelinquency(data);
+      if (result.success) {
+        addToast('Inadimplência criada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao criar a inadimplência. ${result.error}`, 'error');
+      }
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingDelinquencyId) {
-      deleteDelinquency(deletingDelinquencyId);
-      addToast('Inadimplência excluída com sucesso!');
-      setIsDeleteModalOpen(false);
-      setDeletingDelinquencyId(null);
+      const result = await deleteDelinquency(deletingDelinquencyId);
+      if (result.success) {
+        addToast('Inadimplência excluída com sucesso!');
+        setIsDeleteModalOpen(false);
+        setDeletingDelinquencyId(null);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao excluir a inadimplência. ${result.error}`, 'error');
+      }
     }
   };
 
@@ -126,58 +134,60 @@ export function Delinquencies() {
       </div>
 
       <div className="grid gap-4">
-        {delinquencies.map((delinquency) => (
-          <Card key={delinquency.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-xl">{delinquency.unit}</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge className={getStatusColor(delinquency.status)}>
-                    {getStatusLabel(delinquency.status)}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenEditModal(delinquency)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDeleteModal(delinquency.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
+        {delinquencies.length === 0 ? (
+          <div className="flex items-center justify-center py-20">
+            <p className="text-lg text-muted-foreground">Você ainda não tem inadimplências cadastradas</p>
+          </div>
+        ) : (
+          delinquencies.map((delinquency) => (
+            <Card key={delinquency.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-xl">{delinquency.unit}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(delinquency.status)}>
+                      {getStatusLabel(delinquency.status)}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEditModal(delinquency)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenDeleteModal(delinquency.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Morador:</span>{' '}
-                  <span className="font-medium">{delinquency.residentName}</span>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Morador:</span>{' '}
+                    <span className="font-medium">{delinquency.residentName}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Vencimento:</span>{' '}
+                    <span className="font-medium">
+                      {delinquency.dueDate.toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Valor:</span>{' '}
+                    <span className="font-medium text-lg">
+                      R$ {formatCurrencyForInput(delinquency.amount)}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Mês/Ano:</span>{' '}
-                  <span className="font-medium">{delinquency.month}/{delinquency.year}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Valor:</span>{' '}
-                  <span className="font-medium text-lg">
-                    R$ {formatCurrencyForInput(delinquency.amount)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Vencimento:</span>{' '}
-                  <span className="font-medium">
-                    {delinquency.dueDate.toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <Modal
@@ -222,28 +232,8 @@ export function Delinquencies() {
                 id="dueDate"
                 type="date"
                 value={formData.dueDate}
+                max={new Date().toISOString().split('T')[0]}
                 onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="month">Mês</Label>
-              <Input
-                id="month"
-                value={formData.month}
-                onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-                placeholder="Ex: Janeiro"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="year">Ano</Label>
-              <IntegerInput
-                id="year"
-                value={formData.year}
-                onChange={(value) => setFormData({ ...formData, year: value })}
                 required
               />
             </div>

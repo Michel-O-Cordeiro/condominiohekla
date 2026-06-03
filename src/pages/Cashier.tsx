@@ -144,7 +144,7 @@ export function Cashier() {
     return (condominium + reserve + workTax) * apartments;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     let transactionValue: number;
@@ -174,21 +174,34 @@ export function Cashier() {
     };
 
     if (editingTransaction) {
-      updateTransaction(editingTransaction.id, data);
-      addToast('Transação atualizada com sucesso!');
+      const result = await updateTransaction(editingTransaction.id, data);
+      if (result.success) {
+        addToast('Transação atualizada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao atualizar a transação. ${result.error}`, 'error');
+      }
     } else {
-      addTransaction(data);
-      addToast('Transação criada com sucesso!');
+      const result = await addTransaction(data);
+      if (result.success) {
+        addToast('Transação criada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao criar a transação. ${result.error}`, 'error');
+      }
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingTransactionId) {
-      deleteTransaction(deletingTransactionId);
-      addToast('Transação excluída com sucesso!');
-      setIsDeleteModalOpen(false);
-      setDeletingTransactionId(null);
+      const result = await deleteTransaction(deletingTransactionId);
+      if (result.success) {
+        addToast('Transação excluída com sucesso!');
+        setIsDeleteModalOpen(false);
+        setDeletingTransactionId(null);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao excluir a transação. ${result.error}`, 'error');
+      }
     }
   };
 

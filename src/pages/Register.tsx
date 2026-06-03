@@ -16,11 +16,46 @@ export function Register() {
   const { register } = useAuthStore();
   const navigate = useNavigate();
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+    return passwordRegex.test(password);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     
+    if (!name.trim()) {
+      setError('Nome é obrigatório!');
+      return;
+    }
+
+    if (!email.trim()) {
+      setError('Email é obrigatório!');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setError('Email inválido!');
+      return;
+    }
+
+    if (!password) {
+      setError('Senha é obrigatória!');
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setError('Senha deve ter pelo menos 6 caracteres, incluindo letra maiúscula, minúscula, número e caracter especial!');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('As senhas não coincidem!');
       return;

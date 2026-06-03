@@ -119,27 +119,40 @@ export function WorkOrders() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = {
       ...formData,
     };
     if (editingWorkOrder) {
-      updateWorkOrder(editingWorkOrder.id, data);
-      addToast('Ordem de serviço atualizada com sucesso!');
+      const result = await updateWorkOrder(editingWorkOrder.id, data);
+      if (result.success) {
+        addToast('Ordem de serviço atualizada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao atualizar a ordem de serviço. ${result.error}`, 'error');
+      }
     } else {
-      addWorkOrder(data);
-      addToast('Ordem de serviço criada com sucesso!');
+      const result = await addWorkOrder(data);
+      if (result.success) {
+        addToast('Ordem de serviço criada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao criar a ordem de serviço. ${result.error}`, 'error');
+      }
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingWorkOrderId) {
-      deleteWorkOrder(deletingWorkOrderId);
-      addToast('Ordem de serviço excluída com sucesso!');
-      setIsDeleteModalOpen(false);
-      setDeletingWorkOrderId(null);
+      const result = await deleteWorkOrder(deletingWorkOrderId);
+      if (result.success) {
+        addToast('Ordem de serviço excluída com sucesso!');
+        setIsDeleteModalOpen(false);
+        setDeletingWorkOrderId(null);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao excluir a ordem de serviço. ${result.error}`, 'error');
+      }
     }
   };
 
@@ -159,83 +172,89 @@ export function WorkOrders() {
       </div>
 
       <div className="grid gap-4">
-        {workOrders.map((workOrder) => (
-          <Card key={workOrder.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-xl">{workOrder.title}</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge className={getStatusColor(workOrder.status)}>
-                    {getStatusLabel(workOrder.status)}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenEditModal(workOrder)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDeleteModal(workOrder.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
+        {workOrders.length === 0 ? (
+          <div className="flex items-center justify-center py-20">
+            <p className="text-lg text-muted-foreground">Você ainda não tem ordens de serviço cadastradas</p>
+          </div>
+        ) : (
+          workOrders.map((workOrder) => (
+            <Card key={workOrder.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-xl">{workOrder.title}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(workOrder.status)}>
+                      {getStatusLabel(workOrder.status)}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEditModal(workOrder)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenDeleteModal(workOrder.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">{workOrder.description}</p>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Valor do Serviço:</span>{' '}
-                  <span className="font-medium">
-                    R$ {formatCurrencyForInput(workOrder.serviceValue)}
-                  </span>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">{workOrder.description}</p>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Valor do Serviço:</span>{' '}
+                    <span className="font-medium">
+                      R$ {formatCurrencyForInput(workOrder.serviceValue)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Data:</span>{' '}
+                    <span className="font-medium">
+                      {workOrder.createdAt.toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  {workOrder.assignedTo && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Atribuído a:</span>{' '}
+                      <span className="font-medium">{workOrder.assignedTo}</span>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Data:</span>{' '}
-                  <span className="font-medium">
-                    {workOrder.createdAt.toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-                {workOrder.assignedTo && (
-                  <div className="col-span-2">
-                    <span className="text-muted-foreground">Atribuído a:</span>{' '}
-                    <span className="font-medium">{workOrder.assignedTo}</span>
+
+                {workOrder.products.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2">Produtos Utilizados</h4>
+                    <div className="space-y-1 text-sm">
+                      {workOrder.products.map((product) => (
+                        <div key={product.id} className="flex justify-between">
+                          <span>
+                            {product.name} x{product.quantity}
+                          </span>
+                          <span>
+                            R$ {formatCurrencyForInput(product.quantity * product.unitPrice)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {workOrder.products.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-medium mb-2">Produtos Utilizados</h4>
-                  <div className="space-y-1 text-sm">
-                    {workOrder.products.map((product) => (
-                      <div key={product.id} className="flex justify-between">
-                        <span>
-                          {product.name} x{product.quantity}
-                        </span>
-                        <span>
-                          R$ {formatCurrencyForInput(product.quantity * product.unitPrice)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="pt-4 border-t border-border flex justify-between font-bold">
+                  <span>Total:</span>
+                  <span className="text-lg">
+                    R$ {formatCurrencyForInput(workOrder.totalValue)}
+                  </span>
                 </div>
-              )}
-
-              <div className="pt-4 border-t border-border flex justify-between font-bold">
-                <span>Total:</span>
-                <span className="text-lg">
-                  R$ {formatCurrencyForInput(workOrder.totalValue)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <Modal
@@ -323,7 +342,7 @@ export function WorkOrders() {
                 />
               </div>
               <div className="col-span-1">
-                <Button type="button" onClick={handleAddProduct} className="w-full">
+                <Button type="button" onClick={handleAddProduct} size="icon" className="w-full">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>

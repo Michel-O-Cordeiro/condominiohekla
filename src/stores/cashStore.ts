@@ -1,97 +1,110 @@
 import { create } from 'zustand';
 import { CashTransaction } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { useEffect } from 'react';
 
 interface CashStore {
   transactions: CashTransaction[];
-  addTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt'>) => void;
-  updateTransaction: (id: string, transaction: Partial<CashTransaction>) => void;
-  deleteTransaction: (id: string) => void;
+  isLoading: boolean;
+  fetchTransactions: () => Promise<void>;
+  addTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt'>) => Promise<{ success: boolean; error?: string }>;
+  updateTransaction: (id: string, transaction: Partial<CashTransaction>) => Promise<{ success: boolean; error?: string }>;
+  deleteTransaction: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-const initialTransactions: CashTransaction[] = [
-  {
-    id: '1',
-    type: 'income',
-    category: {
-      condominiumValue: 450.00,
-      reserveValue: 50.00,
-      workTaxValue: 0,
-      paidApartments: 12
-    },
-    value: (450 + 50) * 12,
-    month: 'Janeiro',
-    year: 2024,
-    createdAt: new Date('2024-01-05')
-  },
-  {
-    id: '2',
-    type: 'income',
-    category: {
-      condominiumValue: 450.00,
-      reserveValue: 50.00,
-      workTaxValue: 30.00,
-      paidApartments: 10
-    },
-    value: (450 + 50 + 30) * 10,
-    month: 'Fevereiro',
-    year: 2024,
-    createdAt: new Date('2024-02-05')
-  },
-  {
-    id: '3',
-    type: 'expense',
-    description: 'Manutenção do elevador',
-    value: 1200.00,
-    month: 'Fevereiro',
-    year: 2024,
-    createdAt: new Date('2024-02-15')
-  },
-  {
-    id: '4',
-    type: 'income',
-    category: {
-      condominiumValue: 450.00,
-      reserveValue: 50.00,
-      workTaxValue: 30.00,
-      paidApartments: 15
-    },
-    value: (450 + 50 + 30) * 15,
-    month: 'Março',
-    year: 2024,
-    createdAt: new Date('2024-03-05')
-  },
-  {
-    id: '5',
-    type: 'expense',
-    description: 'Limpeza da área comum',
-    value: 800.00,
-    month: 'Março',
-    year: 2024,
-    createdAt: new Date('2024-03-20')
-  }
-];
+export const useCashStore = create<CashStore>((set, get) => ({
+  transactions: [],
+  isLoading: false,
 
-export const useCashStore = create<CashStore>((set) => ({
-  transactions: initialTransactions,
-  addTransaction: (transaction) =>
-    set((state) => ({
-      transactions: [
-        ...state.transactions,
-        {
-          ...transaction,
-          id: Math.random().toString(36).substring(2, 9),
-          createdAt: new Date(),
-        },
-      ],
-    })),
-  updateTransaction: (id, transaction) =>
-    set((state) => ({
-      transactions: state.transactions.map((t) =>
-        t.id === id ? { ...t, ...transaction } : t
-      ),
-    })),
-  deleteTransaction: (id) =>
-    set((state) => ({
-      transactions: state.transactions.filter((t) => t.id !== id),
-    })),
+  fetchTransactions: async () => {
+    set({ isLoading: true });
+    const { data, error } = await supabase
+      .from('cash_transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching transactions:', error);
+    } else {
+      set({
+        transactions: data.map((item: any) => ({
+          id: item.id,
+          type: item.type as 'income' | 'expense',
+          category: item.category,
+          description: item.description,
+          value: item.value,
+          month: item.month,
+          year: item.year,
+          createdAt: new Date(item.created_at),
+        })),
+      });
+    }
+    set({ isLoading: false });
+  },
+
+  addTransaction: async (transaction) => {
+    const { error } = await supabase.from('cash_transactions').insert({
+      type: transaction.type,
+      category: transaction.category,
+      description: transaction.description,
+      value: transaction.value,
+      month: transaction.month,
+      year: transaction.year,
+    });
+
+    if (error) {
+      console.error('Error adding cash transaction:', error);
+      return { success: false, error: error.message };
+    }
+
+    get().fetchTransactions();
+    return { success: true };
+  },
+
+  updateTransaction: async (id, transaction) => {
+    const updateData: any = {};
+    if (transaction.type) updateData.type = transaction.type;
+    if (transaction.category !== undefined) updateData.category = transaction.category;
+    if (transaction.description !== undefined) updateData.description = transaction.description;
+    if (transaction.value !== undefined) updateData.value = transaction.value;
+    if (transaction.month) updateData.month = transaction.month;
+    if (transaction.year !== undefined) updateData.year = transaction.year;
+
+    const { error } = await supabase
+      .from('cash_transactions')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating cash transaction:', error);
+      return { success: false, error: error.message };
+    }
+
+    get().fetchTransactions();
+    return { success: true };
+  },
+
+  deleteTransaction: async (id) => {
+    const { error } = await supabase
+      .from('cash_transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting cash transaction:', error);
+      return { success: false, error: error.message };
+    }
+
+    get().fetchTransactions();
+    return { success: true };
+  },
 }));
+
+// Hook para inicializar a busca de transações
+export function useInitializeTransactions() {
+  const fetchTransactions = useCashStore((state) => state.fetchTransactions);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+}

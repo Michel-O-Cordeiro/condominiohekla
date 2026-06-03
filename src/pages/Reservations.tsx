@@ -87,30 +87,42 @@ export function Reservations() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const data = {
+      ...formData,
+      date: new Date(formData.date),
+    };
+    
     if (editingReservation) {
-      updateReservation(editingReservation.id, {
-        ...formData,
-        date: new Date(formData.date),
-      });
-      addToast('Reserva atualizada com sucesso!');
+      const result = await updateReservation(editingReservation.id, data);
+      if (result.success) {
+        addToast('Reserva atualizada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao atualizar a reserva. ${result.error}`, 'error');
+      }
     } else {
-      addReservation({
-        ...formData,
-        date: new Date(formData.date),
-      });
-      addToast('Reserva criada com sucesso!');
+      const result = await addReservation(data);
+      if (result.success) {
+        addToast('Reserva criada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao criar a reserva. ${result.error}`, 'error');
+      }
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingReservationId) {
-      deleteReservation(deletingReservationId);
-      addToast('Reserva excluída com sucesso!');
-      setIsDeleteModalOpen(false);
-      setDeletingReservationId(null);
+      const result = await deleteReservation(deletingReservationId);
+      if (result.success) {
+        addToast('Reserva excluída com sucesso!');
+        setIsDeleteModalOpen(false);
+        setDeletingReservationId(null);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao excluir a reserva. ${result.error}`, 'error');
+      }
     }
   };
 
@@ -125,60 +137,66 @@ export function Reservations() {
       </div>
 
       <div className="grid gap-4">
-        {reservations.map((reservation) => (
-          <Card key={reservation.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-xl">{reservation.area}</CardTitle>
+        {reservations.length === 0 ? (
+          <div className="flex items-center justify-center py-20">
+            <p className="text-lg text-muted-foreground">Você ainda não tem reservas cadastradas</p>
+          </div>
+        ) : (
+          reservations.map((reservation) => (
+            <Card key={reservation.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-xl">{reservation.area}</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(reservation.status)}>
+                      {getStatusLabel(reservation.status)}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEditModal(reservation)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenDeleteModal(reservation.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={getStatusColor(reservation.status)}>
-                    {getStatusLabel(reservation.status)}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenEditModal(reservation)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDeleteModal(reservation.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Data:</span>{' '}
+                    <span className="font-medium">
+                      {reservation.date.toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Horário:</span>{' '}
+                    <span className="font-medium">
+                      {reservation.startTime} - {reservation.endTime}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Morador:</span>{' '}
+                    <span className="font-medium">{reservation.residentName}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Unidade:</span>{' '}
+                    <span className="font-medium">{reservation.unit}</span>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Data:</span>{' '}
-                  <span className="font-medium">
-                    {reservation.date.toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Horário:</span>{' '}
-                  <span className="font-medium">
-                    {reservation.startTime} - {reservation.endTime}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Morador:</span>{' '}
-                  <span className="font-medium">{reservation.residentName}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Unidade:</span>{' '}
-                  <span className="font-medium">{reservation.unit}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <Modal

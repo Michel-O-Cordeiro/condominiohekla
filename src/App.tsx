@@ -9,13 +9,22 @@ import { Delinquencies } from '@/pages/Delinquencies'
 import { WorkOrders } from '@/pages/WorkOrders'
 import { Cashier } from '@/pages/Cashier'
 import { MainLayout } from '@/layouts/MainLayout'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore, useInitializeAuth } from '@/stores/authStore'
 import { useThemeStore, useInitializeTheme } from '@/stores/themeStore'
+import { useInitializeReservations } from '@/stores/reservationStore'
+import { useInitializeIncidents } from '@/stores/incidentStore'
+import { useInitializeDelinquencies } from '@/stores/delinquencyStore'
+import { useInitializeWorkOrders } from '@/stores/workOrderStore'
+import { useInitializeTransactions } from '@/stores/cashStore'
 import { ToastProvider } from '@/components/ToastContainer'
 import { useEffect } from 'react'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isLoading } = useAuthStore()
+  
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
@@ -25,10 +34,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isLoading } = useAuthStore()
   const { theme } = useThemeStore()
   
+  useInitializeAuth()
   useInitializeTheme()
+  useInitializeReservations()
+  useInitializeIncidents()
+  useInitializeDelinquencies()
+  useInitializeWorkOrders()
+  useInitializeTransactions()
   
   useEffect(() => {
     if (theme === 'dark') {
@@ -37,6 +52,14 @@ function App() {
       document.documentElement.classList.remove('dark')
     }
   }, [theme])
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Carregando...
+      </div>
+    )
+  }
   
   return (
     <ToastProvider>

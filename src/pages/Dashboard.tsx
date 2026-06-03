@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useCashStore } from '@/stores/cashStore';
+import { useReservationStore } from '@/stores/reservationStore';
+import { useIncidentStore } from '@/stores/incidentStore';
+import { useDelinquencyStore } from '@/stores/delinquencyStore';
+import { useWorkOrderStore } from '@/stores/workOrderStore';
 import { formatCurrencyForInput } from '@/lib/utils';
 
 const months = [
@@ -17,6 +21,10 @@ const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
 export function Dashboard() {
   const { transactions } = useCashStore();
+  const { reservations } = useReservationStore();
+  const { incidents } = useIncidentStore();
+  const { delinquencies } = useDelinquencyStore();
+  const { workOrders } = useWorkOrderStore();
   
   const [isFilterActive, setIsFilterActive] = useState(false);
   const [tempMonth, setTempMonth] = useState(months[new Date().getMonth()]);
@@ -63,11 +71,35 @@ export function Dashboard() {
     setSelectedYear(null);
   };
 
+  const todayReservations = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return reservations.filter(r => {
+      const reservationDate = new Date(r.date);
+      reservationDate.setHours(0, 0, 0, 0);
+      return reservationDate.getTime() === today.getTime();
+    }).length;
+  }, [reservations]);
+
+  const openIncidents = useMemo(() => {
+    return incidents.filter(i => i.status === 'open' || i.status === 'in_progress').length;
+  }, [incidents]);
+
+  const overdueDelinquencies = useMemo(() => {
+    return delinquencies.filter(d => d.status === 'overdue').length;
+  }, [delinquencies]);
+
+  const pendingWorkOrders = useMemo(() => {
+    return workOrders.filter(wo => wo.status === 'pending' || wo.status === 'in_progress').length;
+  }, [workOrders]);
+
   const generalStats = [
-    { title: 'Reservas Hoje', value: '5', icon: Calendar, color: 'bg-blue-500' },
-    { title: 'Ocorrências Abertas', value: '3', icon: AlertTriangle, color: 'bg-red-500' },
-    { title: 'Inadimplentes', value: '8', icon: DollarSign, color: 'bg-yellow-500' },
-    { title: 'Ordens de Serviço', value: '2', icon: Wrench, color: 'bg-green-500' },
+    { title: 'Reservas Hoje', value: todayReservations.toString(), icon: Calendar, color: 'bg-blue-500' },
+    { title: 'Ocorrências Abertas', value: openIncidents.toString(), icon: AlertTriangle, color: 'bg-red-500' },
+    { title: 'Inadimplentes', value: overdueDelinquencies.toString(), icon: DollarSign, color: 'bg-yellow-500' },
+    { title: 'Ordens de Serviço', value: pendingWorkOrders.toString(), icon: Wrench, color: 'bg-green-500' },
   ];
 
   return (

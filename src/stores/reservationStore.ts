@@ -1,59 +1,113 @@
 import { create } from 'zustand';
 import { Reservation } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { useEffect } from 'react';
 
 interface ReservationStore {
   reservations: Reservation[];
-  addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => void;
-  updateReservation: (id: string, reservation: Partial<Reservation>) => void;
-  deleteReservation: (id: string) => void;
+  isLoading: boolean;
+  fetchReservations: () => Promise<void>;
+  addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => Promise<{ success: boolean; error?: string }>;
+  updateReservation: (id: string, reservation: Partial<Reservation>) => Promise<{ success: boolean; error?: string }>;
+  deleteReservation: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-const initialReservations: Reservation[] = [
-  {
-    id: '1',
-    area: 'Salão de Festas',
-    date: new Date('2024-12-15'),
-    startTime: '14:00',
-    endTime: '22:00',
-    residentName: 'João Silva',
-    unit: 'Apto 101',
-    status: 'confirmed',
-    createdAt: new Date()
-  },
-  {
-    id: '2',
-    area: 'Churrasqueira',
-    date: new Date('2024-12-20'),
-    startTime: '11:00',
-    endTime: '18:00',
-    residentName: 'Maria Santos',
-    unit: 'Apto 205',
-    status: 'pending',
-    createdAt: new Date()
-  }
-];
+export const useReservationStore = create<ReservationStore>((set, get) => ({
+  reservations: [],
+  isLoading: false,
 
-export const useReservationStore = create<ReservationStore>((set) => ({
-  reservations: initialReservations,
-  addReservation: (reservation) =>
-    set((state) => ({
-      reservations: [
-        ...state.reservations,
-        {
-          ...reservation,
-          id: Math.random().toString(36).substring(2, 9),
-          createdAt: new Date(),
-        },
-      ],
-    })),
-  updateReservation: (id, reservation) =>
-    set((state) => ({
-      reservations: state.reservations.map((r) =>
-        r.id === id ? { ...r, ...reservation } : r
-      ),
-    })),
-  deleteReservation: (id) =>
-    set((state) => ({
-      reservations: state.reservations.filter((r) => r.id !== id),
-    })),
+  fetchReservations: async () => {
+    set({ isLoading: true });
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching reservations:', error);
+    } else {
+      set({
+        reservations: data.map((item: any) => ({
+          id: item.id,
+          area: item.area,
+          date: new Date(item.date),
+          startTime: item.start_time,
+          endTime: item.end_time,
+          residentName: item.resident_name,
+          unit: item.unit,
+          status: item.status as 'pending' | 'confirmed' | 'cancelled',
+          createdAt: new Date(item.created_at),
+        })),
+      });
+    }
+    set({ isLoading: false });
+  },
+
+  addReservation: async (reservation) => {
+    const { error } = await supabase.from('reservations').insert({
+      area: reservation.area,
+      date: reservation.date.toISOString().split('T')[0],
+      start_time: reservation.startTime,
+      end_time: reservation.endTime,
+      resident_name: reservation.residentName,
+      unit: reservation.unit,
+      status: reservation.status || 'pending',
+    });
+
+    if (error) {
+      console.error('Error adding reservation:', error);
+      return { success: false, error: error.message };
+    }
+
+    get().fetchReservations();
+    return { success: true };
+  },
+
+  updateReservation: async (id, reservation) => {
+    const updateData: any = {};
+    if (reservation.area) updateData.area = reservation.area;
+    if (reservation.date) updateData.date = reservation.date.toISOString().split('T')[0];
+    if (reservation.startTime) updateData.start_time = reservation.startTime;
+    if (reservation.endTime) updateData.end_time = reservation.endTime;
+    if (reservation.residentName) updateData.resident_name = reservation.residentName;
+    if (reservation.unit) updateData.unit = reservation.unit;
+    if (reservation.status) updateData.status = reservation.status;
+
+    const { error } = await supabase
+      .from('reservations')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating reservation:', error);
+      return { success: false, error: error.message };
+    }
+
+    get().fetchReservations();
+    return { success: true };
+  },
+
+  deleteReservation: async (id) => {
+    const { error } = await supabase
+      .from('reservations')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting reservation:', error);
+      return { success: false, error: error.message };
+    }
+
+    get().fetchReservations();
+    return { success: true };
+  },
 }));
+
+// Hook para inicializar a busca de reservas
+export function useInitializeReservations() {
+  const fetchReservations = useReservationStore((state) => state.fetchReservations);
+
+  useEffect(() => {
+    fetchReservations();
+  }, [fetchReservations]);
+}

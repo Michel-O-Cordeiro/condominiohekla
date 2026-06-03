@@ -127,24 +127,37 @@ export function Incidents() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingIncident) {
-      updateIncident(editingIncident.id, formData);
-      addToast('Ocorrência atualizada com sucesso!');
+      const result = await updateIncident(editingIncident.id, formData);
+      if (result.success) {
+        addToast('Ocorrência atualizada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao atualizar a ocorrência. ${result.error}`, 'error');
+      }
     } else {
-      addIncident(formData);
-      addToast('Ocorrência criada com sucesso!');
+      const result = await addIncident(formData);
+      if (result.success) {
+        addToast('Ocorrência criada com sucesso!');
+        setIsModalOpen(false);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao criar a ocorrência. ${result.error}`, 'error');
+      }
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingIncidentId) {
-      deleteIncident(deletingIncidentId);
-      addToast('Ocorrência excluída com sucesso!');
-      setIsDeleteModalOpen(false);
-      setDeletingIncidentId(null);
+      const result = await deleteIncident(deletingIncidentId);
+      if (result.success) {
+        addToast('Ocorrência excluída com sucesso!');
+        setIsDeleteModalOpen(false);
+        setDeletingIncidentId(null);
+      } else {
+        addToast(`Atenção: Ocorreu um erro ao excluir a ocorrência. ${result.error}`, 'error');
+      }
     }
   };
 
@@ -159,62 +172,68 @@ export function Incidents() {
       </div>
 
       <div className="grid gap-4">
-        {incidents.map((incident) => (
-        <Card key={incident.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-xl">{incident.title}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">{incident.description}</p>
+        {incidents.length === 0 ? (
+          <div className="flex items-center justify-center py-20">
+            <p className="text-lg text-muted-foreground">Você ainda não tem ocorrências cadastradas</p>
+          </div>
+        ) : (
+          incidents.map((incident) => (
+            <Card key={incident.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-xl">{incident.title}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">{incident.description}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge className={getStatusColor(incident.status)}>
+                      {getStatusLabel(incident.status)}
+                    </Badge>
+                    <Badge className={getPriorityColor(incident.priority)}>
+                      {getPriorityLabel(incident.priority)}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEditModal(incident)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenDeleteModal(incident.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Badge className={getStatusColor(incident.status)}>
-                    {getStatusLabel(incident.status)}
-                  </Badge>
-                  <Badge className={getPriorityColor(incident.priority)}>
-                    {getPriorityLabel(incident.priority)}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenEditModal(incident)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDeleteModal(incident.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Tipo:</span>{' '}
+                    <span className="font-medium">{getTypeLabel(incident.type)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Localização:</span>{' '}
+                    <span className="font-medium">{incident.location}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Reportado por:</span>{' '}
+                    <span className="font-medium">{incident.reportedBy}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Data:</span>{' '}
+                    <span className="font-medium">
+                      {incident.reportedAt.toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Tipo:</span>{' '}
-                  <span className="font-medium">{getTypeLabel(incident.type)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Localização:</span>{' '}
-                  <span className="font-medium">{incident.location}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Reportado por:</span>{' '}
-                  <span className="font-medium">{incident.reportedBy}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Data:</span>{' '}
-                  <span className="font-medium">
-                    {incident.reportedAt.toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <Modal

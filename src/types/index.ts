@@ -37,8 +37,6 @@ export interface Delinquency {
   amount: number;
   dueDate: Date;
   status: 'overdue' | 'pending' | 'paid';
-  month: string;
-  year: number;
 }
 
 export interface WorkOrder {
