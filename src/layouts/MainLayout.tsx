@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
@@ -7,10 +7,14 @@ import {
   DollarSign, 
   Wrench, 
   LogOut, 
-  Menu, 
+  Menu,
+  Sun,
+  Moon,
+  Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -18,9 +22,19 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -31,12 +45,13 @@ export function MainLayout({ children }: MainLayoutProps) {
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/reservations', label: 'Reservas', icon: Calendar },
     { path: '/incidents', label: 'Ocorrências', icon: AlertTriangle },
+    { path: '/cashier', label: 'Caixa', icon: Wallet },
     { path: '/delinquencies', label: 'Inadimplência', icon: DollarSign },
     { path: '/work-orders', label: 'Ordens de Serviço', icon: Wrench },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar Mobile */}
       {sidebarOpen && (
         <div 
@@ -72,22 +87,16 @@ export function MainLayout({ children }: MainLayoutProps) {
             );
           })}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            Sair
-          </Button>
-        </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4">
+        <header className={`sticky top-0 z-30 border-b border-border px-6 py-4 transition-all duration-200 ${
+          isScrolled 
+            ? 'bg-background/80 backdrop-blur-md' 
+            : 'bg-background'
+        }`}>
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
@@ -97,8 +106,23 @@ export function MainLayout({ children }: MainLayoutProps) {
             >
               <Menu className="h-6 w-6" />
             </Button>
-            <div className="flex items-center gap-4">
-              <span className="text-slate-700">Olá, {user?.name}</span>
+            <div className="flex items-center gap-4 ml-auto">
+              <span className="text-foreground">Olá, {user?.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+              >
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                title="Sair"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </header>
@@ -109,7 +133,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </main>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-slate-200 px-6 py-4 text-center text-sm text-slate-500">
+        <footer className="bg-background border-t border-border px-6 py-4 text-center text-sm text-muted-foreground">
           © 2024 Condomínio Hekla. Todos os direitos reservados.
         </footer>
       </div>

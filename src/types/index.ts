@@ -59,3 +59,19 @@ export interface Product {
   quantity: number;
   unitPrice: number;
 }
+
+export interface CashTransaction {
+  id: string;
+  type: 'income' | 'expense';
+  category?: {
+    condominiumValue: number;
+    reserveValue: number;
+    workTaxValue: number;
+    paidApartments: number;
+  } | null;
+  description?: string;
+  value: number;
+  month: string;
+  year: number;
+  createdAt: Date;
+}
