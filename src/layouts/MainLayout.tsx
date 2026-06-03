@@ -134,7 +134,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
         {/* Footer */}
         <footer className="bg-background border-t border-border px-6 py-4 text-center text-sm text-muted-foreground">
-          © 2024 Condomínio Hekla. Todos os direitos reservados.
+          © 2026 Michel Oliveira. Todos os direitos reservados.
         </footer>
       </div>
     </div>
