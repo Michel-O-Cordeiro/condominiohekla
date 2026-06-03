@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, AlertTriangle, DollarSign, Wrench, Wallet, Coins, ArrowLeftRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -96,11 +96,15 @@ export function Dashboard() {
   }, [workOrders]);
 
   const generalStats = [
-    { title: 'Reservas Hoje', value: todayReservations.toString(), icon: Calendar, color: 'bg-blue-500' },
+    { title: 'Reservas', value: todayReservations.toString(), icon: Calendar, color: 'bg-blue-500' },
     { title: 'Ocorrências Abertas', value: openIncidents.toString(), icon: AlertTriangle, color: 'bg-red-500' },
     { title: 'Inadimplentes', value: overdueDelinquencies.toString(), icon: DollarSign, color: 'bg-yellow-500' },
     { title: 'Ordens de Serviço', value: pendingWorkOrders.toString(), icon: Wrench, color: 'bg-green-500' },
   ];
+
+  useEffect(() => {
+    //
+  }, [reservations]);
 
   return (
     <div className="space-y-6">
