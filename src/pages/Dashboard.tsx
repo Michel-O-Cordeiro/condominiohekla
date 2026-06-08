@@ -20,17 +20,39 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
 export function Dashboard() {
-  const { transactions } = useCashStore();
-  const { reservations } = useReservationStore();
-  const { incidents } = useIncidentStore();
-  const { delinquencies } = useDelinquencyStore();
-  const { workOrders } = useWorkOrderStore();
+  const { transactions, fetchTransactions } = useCashStore();
+  const { reservations, fetchReservations } = useReservationStore();
+  const { incidents, fetchIncidents } = useIncidentStore();
+  const { delinquencies, fetchDelinquencies } = useDelinquencyStore();
+  const { workOrders, fetchWorkOrders } = useWorkOrderStore();
   
+  const [isLoading, setIsLoading] = useState(true);
   const [isFilterActive, setIsFilterActive] = useState(false);
   const [tempMonth, setTempMonth] = useState(months[new Date().getMonth()]);
   const [tempYear, setTempYear] = useState(currentYear.toString());
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadAllData = async () => {
+      setIsLoading(true);
+      try {
+        await Promise.all([
+          fetchTransactions(),
+          fetchReservations(),
+          fetchIncidents(),
+          fetchDelinquencies(),
+          fetchWorkOrders()
+        ]);
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAllData();
+  }, [fetchTransactions, fetchReservations, fetchIncidents, fetchDelinquencies, fetchWorkOrders]);
 
   const filteredTransactions = useMemo(() => {
     if (!isFilterActive) {
@@ -102,15 +124,21 @@ export function Dashboard() {
     { title: 'Ordens de Serviço', value: pendingWorkOrders.toString(), icon: Wrench, color: 'bg-green-500' },
   ];
 
-  useEffect(() => {
-    //
-  }, [reservations]);
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <div className="flex items-center justify-center h-96">
+          <p className="text-lg">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Dashboard</h1>
       
-      {/* Filter Card */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Filtrar por Mês/Ano</CardTitle>
@@ -153,7 +181,6 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* General Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {generalStats.map((stat, index) => {
           const Icon = stat.icon;
@@ -173,7 +200,6 @@ export function Dashboard() {
         })}
       </div>
 
-      {/* Cash Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
